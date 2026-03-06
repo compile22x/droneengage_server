@@ -90,7 +90,7 @@ class MyHTTPSClient {
                 const server_port_ss = responseData.cs.h;
                 const server_AuthKey = responseData.cs.f;
                     
-                const wsUrl = `wss://${server_ip}:${server_port_ss}?f=${server_AuthKey}&s=${partyID}`;
+                const wsUrl = `ws://${server_ip}:${server_port_ss}?f=${server_AuthKey}&s=${partyID}`;
 
                 this.connectWebSocket(
                     wsUrl,

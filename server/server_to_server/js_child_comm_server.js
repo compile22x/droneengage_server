@@ -37,7 +37,7 @@ class ChildCommServer {
     };
   
 
-  const parentUrl = `wss://${this.m_parentHost}:${this.m_parentPort}`; // Construct the URL
+  const parentUrl = `ws://${this.m_parentHost}:${this.m_parentPort}`; // Construct the URL
     this.parentWs = new WebSocket(parentUrl
       ,options
     );
