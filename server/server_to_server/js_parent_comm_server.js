@@ -1,6 +1,5 @@
 const WebSocket = require('ws');
-const https = require('https');
-const fs = require('fs');
+const http = require('http');
 const c_ChatServer = require("../chat_server/js_andruav_chat_server");
 
 class ParentCommServer {
@@ -44,14 +43,7 @@ class ParentCommServer {
     console.log("Super Server Starting");
     console.log("listening on ip: " + global.Colors.BSuccess + host + global.Colors.Reset + " port: " + global.Colors.BSuccess + port + global.Colors.Reset);
     
-    const v_path = require('path');
-
-    const options = {
-      key: fs.readFileSync(v_path.join(__dirname, "../" + global.m_serverconfig.m_configuration.ssl_key_file.toString())),
-      cert: fs.readFileSync(v_path.join(__dirname, "../" + global.m_serverconfig.m_configuration.ssl_cert_file.toString()))
-    };
-
-    const server = https.createServer(options);
+    const server = http.createServer();
     this.wss = new WebSocket.Server({ server });
 
     this.wss.on('connection', (child_ws, req) => {

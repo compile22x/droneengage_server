@@ -985,27 +985,19 @@ function send_ok_message(p_ws) {
 
 function fn_startChatServer() {
     const v_express = require('express');
-    const v_fs = require('fs');
-    const v_path = require('path');
     const v_WebSocketServer = require('ws').Server;
-    const c_https = require('https');
+    const c_http = require('http');
 
-    // HTTPS server options
-    const options = {
-        key: v_fs.readFileSync(v_path.join(__dirname, '../', global.m_serverconfig.m_configuration.ssl_key_file.toString())),
-        cert: v_fs.readFileSync(v_path.join(__dirname, '../', global.m_serverconfig.m_configuration.ssl_cert_file.toString()))
-    };
-
-    // Create HTTPS server with Express
+    // Create HTTP server with Express
     const app = new v_express();
-    const wserver = c_https.createServer(options, app);
+    const wserver = c_http.createServer(app);
 
-    // Start HTTPS server
+    // Start HTTP server
     wserver.listen(
         global.m_serverconfig.m_configuration.server_port,
         global.m_serverconfig.m_configuration.server_ip,
         () => {
-            console.log(`HTTPS server started on ${global.m_serverconfig.m_configuration.server_ip}:${global.m_serverconfig.m_configuration.server_port}`);
+            console.log(`HTTP server started on ${global.m_serverconfig.m_configuration.server_ip}:${global.m_serverconfig.m_configuration.server_port}`);
         }
     );
 
