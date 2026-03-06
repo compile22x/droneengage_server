@@ -25,7 +25,7 @@ function fn_onOpen_Handler() {
 function fn_onClose_Handler() {
     console.log(`${global.Colors.Error}ATTENTION!! Connection closed with AuthServer${global.Colors.Reset}`);
 
-    const c_url = `wss://${global.m_serverconfig.m_configuration.s2s_ws_target_ip}:${global.m_serverconfig.m_configuration.s2s_ws_target_port}`;
+    const c_url = `ws://${global.m_serverconfig.m_configuration.s2s_ws_target_ip}:${global.m_serverconfig.m_configuration.s2s_ws_target_port}`;
     setTimeout(() => fn_startWebSocketListener(c_url), CONST_S2S_WS_RETRY_TIME);
 }
 
@@ -57,7 +57,7 @@ function fn_startWebSocketListener(p_url) {
  */
 function fn_startServer() {
     Me = this;
-    const c_url = `wss://${global.m_serverconfig.m_configuration.s2s_ws_target_ip}:${global.m_serverconfig.m_configuration.s2s_ws_target_port}`;
+    const c_url = `ws://${global.m_serverconfig.m_configuration.s2s_ws_target_ip}:${global.m_serverconfig.m_configuration.s2s_ws_target_port}`;
 
     console.log(`${global.Colors.BSuccess}[OK] Comm Server Manager Client connecting to ${c_url} to reach AndruavAuth${global.Colors.Reset}`);
     fn_startWebSocketListener(c_url);

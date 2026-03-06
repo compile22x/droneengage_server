@@ -27,7 +27,7 @@ if (isNaN(resendRate) || resendRate <= 0) {
   process.exit(1);
 }
 
-const serverUrl = `wss://${ip}:${port}?f=${server_AuthKey}&s=${partyID}&at=d`;
+const serverUrl = `ws://${ip}:${port}?f=${server_AuthKey}&s=${partyID}&at=d`;
 
 const headers = {};
 
