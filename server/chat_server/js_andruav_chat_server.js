@@ -821,6 +821,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
     function fn_onConnect_Handler(p_ws, p_req) {
         const c_WS = p_ws;
         const c_params = getHeaderParams(p_req.url);
+        console.log('[ws connect] url params:', JSON.stringify(c_params));
         let v_loginTempKey;
 
         if (global.m_logger) global.m_logger.Info('WS Created from Party', 'fn_onConnect_Handler', null, c_params);
@@ -1017,7 +1018,14 @@ function fn_startChatServer() {
             };
             const proxy_req = c_http.request(options, proxy_res => {
                 res.statusCode = proxy_res.statusCode;
-                proxy_res.pipe(res);
+                Object.entries(proxy_res.headers).forEach(([k, v]) => res.setHeader(k, v));
+                const body_chunks = [];
+                proxy_res.on('data', c => body_chunks.push(c));
+                proxy_res.on('end', () => {
+                    const body_buf = Buffer.concat(body_chunks);
+                    console.log('[agent/al proxy] auth response:', body_buf.toString());
+                    res.end(body_buf);
+                });
             });
             proxy_req.on('error', err => {
                 console.error('[agent/al proxy] auth server error:', err.message);
