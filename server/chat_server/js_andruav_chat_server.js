@@ -1001,8 +1001,10 @@ function fn_startChatServer() {
         const chunks = [];
         req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
-            const body = Buffer.concat(chunks);
-            console.log('[agent/al proxy] Pi sent:', body.toString());
+            // Normalize acc= to lowercase so "Ops@..." matches "ops@..."
+            const body = Buffer.from(
+                Buffer.concat(chunks).toString().replace(/(?<=(?:^|&)acc=)[^&]+/, m => m.toLowerCase())
+            );
             const options = {
                 hostname: AUTH_HOST,
                 port:     AUTH_PORT,
