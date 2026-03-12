@@ -1073,11 +1073,28 @@ function fn_startChatServer() {
     // WebSocket connection handler
     v_wss.on('connection', (ws, req) => {
         console.log(`WebSocket client connected from ${req.socket.remoteAddress}`);
-        // /al is the drone-agent direct WS auth path — log first message to understand protocol
+        // /al — drone-agent WebSocket auth path.
+        // The Pi agent authenticates via the auth server then opens a WS to /al,
+        // sending its session key in the FIRST message (not URL params).
         if (req.url === '/al' || req.url.startsWith('/al?')) {
             ws.once('message', (data) => {
-                console.log('[/al ws] first message from Pi:', data.toString());
-                ws.close();
+                try {
+                    const msg = JSON.parse(data.toString());
+                    console.log('[/al ws] auth message from Pi:', JSON.stringify(msg));
+                    const tempKey = msg['f'] || msg['sid'] || msg['key'];
+                    if (!tempKey) {
+                        console.warn('[/al ws] no key in first message — closing');
+                        ws.close();
+                        return;
+                    }
+                    // Re-use the standard acceptConnection path (key must be in m_waitingAccounts
+                    // placed there by auth server via S2S when Pi authenticated).
+                    const fake_params = { 's': msg['s'] || msg['sd'] || '', 'at': msg['at'] || 'd' };
+                    acceptConnection(tempKey, fake_params, ws);
+                } catch(e) {
+                    console.error('[/al ws] parse error:', e.message, 'raw:', data.toString());
+                    ws.close();
+                }
             });
             return;
         }
