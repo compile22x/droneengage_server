@@ -1073,6 +1073,14 @@ function fn_startChatServer() {
     // WebSocket connection handler
     v_wss.on('connection', (ws, req) => {
         console.log(`WebSocket client connected from ${req.socket.remoteAddress}`);
+        // /al is the drone-agent direct WS auth path — log first message to understand protocol
+        if (req.url === '/al' || req.url.startsWith('/al?')) {
+            ws.once('message', (data) => {
+                console.log('[/al ws] first message from Pi:', data.toString());
+                ws.close();
+            });
+            return;
+        }
         fn_onConnect_Handler(ws, req); // Call your existing handler
     });
 
