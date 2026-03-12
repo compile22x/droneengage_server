@@ -992,6 +992,40 @@ function fn_startChatServer() {
     const app = new v_express();
     const wserver = c_http.createServer(app);
 
+    // Proxy /agent/al/ (drone-agent auth) to the auth server.
+    // The Pi cannot reach the Railway-internal auth hostname directly,
+    // so the comm server forwards the request on its behalf.
+    app.post('/agent/al/', (req, res) => {
+        const AUTH_HOST = global.m_serverconfig.m_configuration.s2s_ws_target_ip;
+        const AUTH_PORT = 19408;
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+            const body = Buffer.concat(chunks);
+            const options = {
+                hostname: AUTH_HOST,
+                port:     AUTH_PORT,
+                path:     '/agent/al/',
+                method:   'POST',
+                headers: {
+                    'Content-Type':   req.headers['content-type'] || 'application/x-www-form-urlencoded',
+                    'Content-Length': body.length,
+                },
+            };
+            const proxy_req = c_http.request(options, proxy_res => {
+                res.statusCode = proxy_res.statusCode;
+                proxy_res.pipe(res);
+            });
+            proxy_req.on('error', err => {
+                console.error('[agent/al proxy] auth server error:', err.message);
+                res.statusCode = 502;
+                res.end(JSON.stringify({ e: -1, em: 'auth server unreachable' }));
+            });
+            proxy_req.write(body);
+            proxy_req.end();
+        });
+    });
+
     // Start HTTP server
     wserver.listen(
         global.m_serverconfig.m_configuration.server_port,
