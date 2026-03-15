@@ -4,12 +4,17 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile"
 
-[http_service]
+[[services]]
+  protocol = "tcp"
   internal_port = 8080
-  force_https = false  # WebSocket server, handles its own protocol
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 0
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+  
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
 
 [vm]
   memory = "256mb"
