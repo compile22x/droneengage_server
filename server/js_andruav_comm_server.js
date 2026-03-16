@@ -8,8 +8,10 @@ const c_CONSTANTS = require("../js_constants");
 const v_version = require('../package.json').version;
 
 const CONST_WAIT_PARTY_TO_CONNECT_TIMEOUT = 10000; //60000; //5000;
+const CONST_DEFAULT_INFO_HEARTBEAT_INTERVAL = 30000;
 
 const m_waitingAccounts = {};
+let m_watchdogInterval = null;
 
 
 function isLoginExist (p_key){
@@ -133,9 +135,18 @@ function fn_generateLoginRequestReply(p_cmd) {
 /**
  * Called whenever a connection established with AuthServer.
  * There is always one single Auth server.
+ * Sends INFO registration immediately and starts periodic heartbeat.
  */
 function fn_AuthServerConnectionHandler() {
+    if (m_watchdogInterval) {
+        clearInterval(m_watchdogInterval);
+        m_watchdogInterval = null;
+    }
+
     fn_updateServerWatchdog();
+
+    const c_interval = global.m_serverconfig.m_configuration.s2s_info_heartbeat_interval || CONST_DEFAULT_INFO_HEARTBEAT_INTERVAL;
+    m_watchdogInterval = setInterval(fn_updateServerWatchdog, c_interval);
 }
 
 /**
@@ -213,6 +224,8 @@ function fn_updateServerWatchdog() {
             // so that it can rout correctly in case of multiple communication_servers
             'accounts': c_ChatAccountRooms.fn_getUnitKeys()
         };
+
+        console.log(`[INFO] Sending S2S INFO to AuthServer: serverId=${v_obj.serverId} public_host=${v_obj.public_host} serverPort=${v_obj.serverPort} accounts=${v_obj.accounts.length}`);
 
         // send Info Card to Andruav Auth
         m_commServerManagerClient.fn_sendMessage(JSON.stringify(

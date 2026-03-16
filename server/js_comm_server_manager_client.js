@@ -5,6 +5,7 @@
  * used by the Auth Server for communication with AndruavAuth.
  */
 
+const WebSocket = require('ws');
 const CONST_S2S_WS_RETRY_TIME = 2000;
 let m_ws;
 let Me;
@@ -44,7 +45,6 @@ function fn_onMessage_Handler(data) {
 }
 
 function fn_startWebSocketListener(p_url) {
-    const WebSocket = require('ws');
     m_ws = new WebSocket(p_url);
     m_ws.on('open', fn_onOpen_Handler);
     m_ws.on('close', fn_onClose_Handler);
@@ -64,7 +64,7 @@ function fn_startServer() {
 }
 
 function fn_sendMessage(p_message) {
-    if (m_ws) {
+    if (m_ws && m_ws.readyState === WebSocket.OPEN) {
         m_ws.send(p_message);
     }
 }
