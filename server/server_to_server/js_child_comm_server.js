@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const c_ChatServer = require("../chat_server/js_andruav_chat_server");
+const vlog = require('../js_vertair_logger');
 
 class ChildCommServer {
   constructor(parentHost, parentPort) {
@@ -24,7 +25,7 @@ class ChildCommServer {
   }
 
   connectToParent() {
-    
+
     // Optional: Add headers for authentication or other purposes
     const headers = {
       // 'Authorization': 'Bearer your-token',
@@ -35,15 +36,12 @@ class ChildCommServer {
       headers: headers,
       rejectUnauthorized: false, // Be very cautious with this in production!
     };
-  
 
-  const parentUrl = `ws://${this.m_parentHost}:${this.m_parentPort}`; // Construct the URL
-    this.parentWs = new WebSocket(parentUrl
-      ,options
-    );
+    const parentUrl = `ws://${this.m_parentHost}:${this.m_parentPort}`; // Construct the URL
+    this.parentWs = new WebSocket(parentUrl, options);
 
     this.parentWs.on('open', () => {
-      console.log(`Child connected to parent server at ${parentUrl}.`);
+      vlog.info('[ChildSrv] Connected to parent server at ' + parentUrl);
     });
 
     this.parentWs.on('message', (message) => {
@@ -51,29 +49,27 @@ class ChildCommServer {
     });
 
     this.parentWs.on('close', (code, reason) => {
-      console.log(`Child disconnected from parent server: ${code} - ${reason}`);
+      vlog.info('[ChildSrv] Disconnected from parent server: ' + code + ' - ' + reason);
       this.parentWs = null;
       // Reconnect logic can be added here.
       setTimeout(() => this.connectToParent(), 10000);
     });
 
     this.parentWs.on('error', (error) => {
-      console.error(`WebSocket error from parent:`, error);
+      vlog.error('[ChildSrv] WebSocket error: ' + error);
     });
   }
 
   onReceive(message) {
     try {
-     
-        console.log (`CHILD RX: ${message}`);
-                let v_isBinary = false;
-                if (typeof (message) !== 'string') {
-                        v_isBinary = true;
-                }
-                c_ChatServer.fn_parseExternalMessage( message, v_isBinary);
-      
+      vlog.verbose('[ChildSrv] RX: ' + message);
+      let v_isBinary = false;
+      if (typeof (message) !== 'string') {
+        v_isBinary = true;
+      }
+      c_ChatServer.fn_parseExternalMessage(message, v_isBinary);
     } catch (error) {
-      console.error(`Error parsing message from parent:`, error);
+      vlog.error('[ChildSrv] Message parse error: ' + error);
     }
   }
 
@@ -81,7 +77,7 @@ class ChildCommServer {
     if (this.parentWs) {
       this.parentWs.send(JSON.stringify({ type: 'message', senderId, recipientId, content, trace }));
     } else {
-      console.error(`Parent server not connected.`);
+      vlog.warn('[ChildSrv] Cannot send — parent server not connected');
     }
   }
 
@@ -90,7 +86,7 @@ class ChildCommServer {
     if (this.parentWs && this.parentWs.readyState === WebSocket.OPEN) {
       this.parentWs.send(message, { binary: p_isBinary });
     } else {
-      console.error("Parent WebSocket is not connected. Cannot forward message.");
+      vlog.warn('[ChildSrv] Cannot forward — parent WebSocket not connected');
     }
   }
 
