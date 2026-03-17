@@ -521,6 +521,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
                 case c_CONSTANTS.CONST_TYPE_AndruavSystem_UdpProxy:
                     if (p_ws.m_loginRequest.m_actorType !== c_CONSTANTS.CONST_ACTOR_TYPE_DRONE) {
                         // only vehicle can create udp proxy
+                        vlog.warn('[UDP] UdpProxy request rejected — sender is not a drone (name=' + p_ws.name + ')');
                         return;
                     }
 
@@ -531,14 +532,17 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
                             v_jmsg.ms.socket2.port = 0;
                         }
 
+                        vlog.info('[UDP] UdpProxy open request from drone=' + p_ws.name + ' s1=' + v_jmsg.ms.socket1.port + ' s2=' + v_jmsg.ms.socket2.port);
+
                         udp.getUDPSocket(p_ws.name, v_jmsg.ms.socket1, v_jmsg.ms.socket2, function (ms) {
                             if (ms.en === false) {
+                                vlog.warn('[UDP] UdpProxy bind failed for drone=' + p_ws.name + ' — closing');
                                 v_jmsg.ms.socket1.port = 0;
                                 v_jmsg.ms.socket2.port = 0;
 
                                 udp.closeUDPSocket(p_ws.name, function (ms) {
                                     v_jmsg.ms = ms;
-                                    v_jmsg.ty = c_CONSTANTS.CONST_WS_MSG_ROUTING_INDIVIDUAL; 
+                                    v_jmsg.ty = c_CONSTANTS.CONST_WS_MSG_ROUTING_INDIVIDUAL;
                                     v_jmsg.tg = p_ws.name; // sender = target
                                     v_jmsg.sd = c_CONSTANTS.CONST_WS_SENDER_COMM_SERVER;
                                     p_ws.send(JSON.stringify(v_jmsg));
@@ -546,20 +550,22 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
 
 
                             } else {
+                                vlog.info('[UDP] UdpProxy ready for drone=' + p_ws.name + ' s1=' + ms.socket1.port + ' s2=' + ms.socket2.port);
                                 v_jmsg.ms = ms;
-                                v_jmsg.ty = c_CONSTANTS.CONST_WS_MSG_ROUTING_INDIVIDUAL; 
+                                v_jmsg.ty = c_CONSTANTS.CONST_WS_MSG_ROUTING_INDIVIDUAL;
                                 v_jmsg.tg = p_ws.name; // sender = target
-                                v_jmsg.sd = c_CONSTANTS.CONST_WS_SENDER_COMM_SERVER; 
+                                v_jmsg.sd = c_CONSTANTS.CONST_WS_SENDER_COMM_SERVER;
                                 p_ws.send(JSON.stringify(v_jmsg));
                             }
                         });
                     } else
                         if (v_jmsg.ms.en === false) {
+                            vlog.info('[UDP] UdpProxy close request from drone=' + p_ws.name);
                             udp.closeUDPSocket(p_ws.name, function (ms) {
                                 v_jmsg.ms = ms;
-                                v_jmsg.ty = c_CONSTANTS.CONST_WS_MSG_ROUTING_INDIVIDUAL; 
+                                v_jmsg.ty = c_CONSTANTS.CONST_WS_MSG_ROUTING_INDIVIDUAL;
                                 v_jmsg.tg = p_ws.name; // sender = target
-                                v_jmsg.sd = c_CONSTANTS.CONST_WS_SENDER_COMM_SERVER; 
+                                v_jmsg.sd = c_CONSTANTS.CONST_WS_SENDER_COMM_SERVER;
                                 p_ws.send(JSON.stringify(v_jmsg));
                             });
                         }
