@@ -4,14 +4,17 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile"
 
-# Fly terminates TLS on 443, upgrades HTTP, forwards to internal 8080
-# This is required for the drone C++ WSS client to complete the WS handshake
-[http_service]
-  internal_port = 8080
-  force_https = false
+# WebSocket server for drones and GCS
+[[services]]
+  protocol = "tcp"
+  internal_port = 443
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls"]
 
 # UDP proxy for Mission Planner (UDPCI connection)
 [[services]]

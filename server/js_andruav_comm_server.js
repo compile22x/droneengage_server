@@ -218,7 +218,7 @@ function fn_updateServerWatchdog() {
             'version': v_version,
             'serverId': global.m_serverconfig.m_configuration.server_id,
             'public_host': global.m_serverconfig.m_configuration.public_host, // this is the ip that is listening to the connections.
-            'serverPort': global.m_serverconfig.m_configuration.public_port || global.m_serverconfig.m_configuration.server_port,
+            'serverPort': global.m_serverconfig.m_configuration.server_port,
             // this is why we send this message with every connection.
             // it is crucial to Auth server to know the exact unique list of keys
             // so that it can rout correctly in case of multiple communication_servers
