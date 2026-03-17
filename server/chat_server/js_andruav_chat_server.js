@@ -16,6 +16,7 @@ const c_andruav_active_senders = require("./js_andruav_active_senders.js");
 
 const c_PluginManager = require('./pluginManager.js');
 const udp = require('../js_udp_proxy.js');
+const vlog = require('../js_vertair_logger');
         
 
 
@@ -53,7 +54,7 @@ function send_message_toMyGroup(message, isbinary, ws) {
         }
     }
     catch (e) {
-        console.log('send_message_toMyGroup :ws:' + ws.name + 'Error:' + e);
+        vlog.error('[WS] Broadcast error: ' + e);
         c_dumpError.fn_dumperror(e);
     }
 }
@@ -69,7 +70,7 @@ function send_message_toMyGroup_Agent(message, isbinary, ws) {
         }
     }
     catch (e) {
-        console.log('send_message_toMyGroup :ws:' + ws.name + 'Error:' + e);
+        vlog.error('[WS] Broadcast error: ' + e);
         c_dumpError.fn_dumperror(e);
     }
 }
@@ -85,7 +86,7 @@ function send_message_toMyGroup_GCS(message, isbinary, ws) {
         }
     }
     catch (e) {
-        console.log('send_message_toMyGroup :ws:' + ws.name + 'Error:' + e);
+        vlog.error('[WS] Broadcast error: ' + e);
         c_dumpError.fn_dumperror(e);
     }
 }
@@ -146,7 +147,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
             }
         } catch (e) {
             // If parsing fails, forward original message
-            console.log("Failed to parse message for origin tracking:", e.message);
+            console.log("[MSG] Parse error for origin tracking: " + e.message);
         }
 
         if (global.m_serverconfig.m_configuration.enable_super_server === true)
@@ -239,7 +240,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
         }
         catch (ex) {
             // exception handling to be removed.
-            console.log("TEMP DEBUG EXCEPTION ... Ex:" + JSON.stringify(ex));
+            vlog.error("[AUTH] Accept connection error: " + JSON.stringify(ex));
             if (global.m_logger) global.m_logger.Error('Party WS Error', 'fn_onConnect_Handler', null, ex);
         }
     }
@@ -821,7 +822,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
     function fn_onConnect_Handler(p_ws, p_req) {
         const c_WS = p_ws;
         const c_params = getHeaderParams(p_req.url);
-        console.log('[ws connect] url params:', JSON.stringify(c_params));
+        vlog.verbose('[WS] Connection params keys: ' + JSON.stringify(Object.keys(c_params)));
         let v_loginTempKey;
 
         if (global.m_logger) global.m_logger.Info('WS Created from Party', 'fn_onConnect_Handler', null, c_params);
@@ -855,7 +856,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
 
             if (!c_andruav_comm_server.isLoginExist(v_loginTempKey)) {
                 // UNAUTHERIZED LOGIN or REPATED Login with same Key .. close the connection.
-                console.log("debug INVALID v_loginTempKey .." + v_loginTempKey)
+                vlog.warn("[AUTH] Rejected — invalid/expired key ..." + (v_loginTempKey||"").slice(-8)); vlog.m_sessionStats.rejections++
 
                 c_WS.close();
                 if (global.m_logger) global.m_logger.Warn('Party failed to login', 'fn_validateKey', null, p_params);
@@ -863,7 +864,7 @@ function send_message_toTarget(message, isbinary, target, ws, onNotFound) {
             }
             else {
 
-                console.log("debug valid v_loginTempKey .." + v_loginTempKey)
+                vlog.verbose("[AUTH] Key validated ..." + (v_loginTempKey||"").slice(-8))
                 if (global.m_logger) global.m_logger.Info('Party successfully login', 'fn_validateKey', null, p_params);
 
                 return true;
@@ -1047,7 +1048,7 @@ function fn_startChatServer() {
         global.m_serverconfig.m_configuration.server_port,
         global.m_serverconfig.m_configuration.server_ip,
         () => {
-            console.log(`HTTP server started on ${global.m_serverconfig.m_configuration.server_ip}:${global.m_serverconfig.m_configuration.server_port}`);
+            vlog.info('[WS] HTTP/WS server listening on ' + global.m_serverconfig.m_configuration.server_ip + ':' + global.m_serverconfig.m_configuration.server_port);
         }
     );
 
@@ -1077,7 +1078,7 @@ function fn_startChatServer() {
 
     // WebSocket connection handler
     v_wss.on('connection', (ws, req) => {
-        console.log(`WebSocket client connected from ${req.socket.remoteAddress}`);
+        vlog.verbose('[WS] Client connected from ' + req.socket.remoteAddress);
         // /al — drone-agent WebSocket auth path.
         // The Pi agent authenticates via the auth server then opens a WS to /al,
         // sending its session key in the FIRST message (not URL params).
@@ -1124,7 +1125,7 @@ function fn_initTasks() {
 
 
 function fn_startServer() {
-    console.log(global.Colors.BSuccess + "[OK] Comm Server Manager has Started at port " + global.m_serverconfig.m_configuration.server_port + global.Colors.Reset);
+    vlog.info("[OK] Comm server ready on port " + global.m_serverconfig.m_configuration.server_port);
     c_PluginManager.fn_initPlugins();
     fn_initTasks();
     fn_startChatServer();
