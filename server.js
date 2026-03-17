@@ -11,7 +11,8 @@ let v_configFileName = global.m_serverconfig.getFileName();
 
 
 
-const m_andruav_comm_server = require ('./server/js_andruav_comm_server.js')
+const vlog = require('./server/js_vertair_logger');
+const m_andruav_comm_server = require('./server/js_andruav_comm_server.js');
 const m_udp_proxy = require('./server/js_udp_proxy.js');
 global.m_andruav_channel_parent_server = require ('./server/server_to_server/js_parent_comm_server.js');
 global.m_andruav_channel_child_socket = require ('./server/server_to_server/js_child_comm_server.js');
@@ -30,13 +31,16 @@ function checkMemory()
         for (let key in used) {
             readings += `${key} ${Math.round(used[key] / 1024 / 1024 * 100) / 100} MB - `;
         }
-        console.log(readings);
+        vlog.verbose('MEM ' + readings.replace(/- $/, ''));
+
+        // Track RSS for heartbeat
+        vlog.m_sessionStats.rssLastMB = Math.round(used.rss / 1024 / 1024 * 100) / 100;
 
         // Check memory limit
         if (global.m_serverconfig.m_configuration.memory_max != null) {
-            const mem = Math.round(used.rss / 1024 / 1024 * 100) / 100;
+            const mem = vlog.m_sessionStats.rssLastMB;
             if (global.m_serverconfig.m_configuration.memory_max < mem) {
-                console.log("Memory is " + global.Colors.FgYellow + mem + global.Colors.Error + ' RESTART' + global.Colors.Reset);
+                vlog.warn('Memory ' + mem + ' MB exceeds limit — restarting');
                 process.exit(1);
             }
         }

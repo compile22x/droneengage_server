@@ -21,6 +21,7 @@ let m_sessionStats = {
     rejections: 0,
     disconnects: 0,
     connectedUnits: 0,
+    rssLastMB: 0,
 };
 
 function isVerbose() {
@@ -59,6 +60,7 @@ function startHeartbeat(getStatsFn) {
         info(`  Logins (session): ${stats.logins}`);
         info(`  Rejections      : ${stats.rejections}`);
         info(`  Disconnects     : ${stats.disconnects}`);
+        info(`  RSS memory      : ${stats.rssLastMB} MB`);
         info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }, CONST_HEARTBEAT_INTERVAL_MS);
 }
