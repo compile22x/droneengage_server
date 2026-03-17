@@ -4,21 +4,19 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile"
 
-# WebSocket server for drones and GCS (FA-Vertair connects here)
+# WebSocket server for drones and GCS
+# internal_port must match server_port in server.config (443)
+# handlers = ["tls"] only — "http" handler breaks WebSocket upgrades
 [[services]]
   protocol = "tcp"
-  internal_port = 8080
+  internal_port = 443
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
-  
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-  
+
   [[services.ports]]
     port = 443
-    handlers = ["tls", "http"]
+    handlers = ["tls"]
 
 [vm]
   memory = "256mb"
