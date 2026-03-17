@@ -13,7 +13,6 @@ let v_configFileName = global.m_serverconfig.getFileName();
 
 const m_andruav_comm_server = require ('./server/js_andruav_comm_server.js')
 const m_udp_proxy = require('./server/js_udp_proxy.js');
-const vlog = require('./server/js_vertair_logger');
 global.m_andruav_channel_parent_server = require ('./server/server_to_server/js_parent_comm_server.js');
 global.m_andruav_channel_child_socket = require ('./server/server_to_server/js_child_comm_server.js');
 
@@ -31,7 +30,7 @@ function checkMemory()
         for (let key in used) {
             readings += `${key} ${Math.round(used[key] / 1024 / 1024 * 100) / 100} MB - `;
         }
-        vlog.verbose('MEM ' + readings.replace(/- $/, ''));
+        console.log(readings);
 
         // Check memory limit
         if (global.m_serverconfig.m_configuration.memory_max != null) {

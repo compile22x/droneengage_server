@@ -1,7 +1,6 @@
 const WebSocket = require('ws');
 const http = require('http');
 const c_ChatServer = require("../chat_server/js_andruav_chat_server");
-const vlog = require('../js_vertair_logger');
 
 class ParentCommServer {
   constructor(host, port) {
@@ -29,7 +28,7 @@ class ParentCommServer {
   restart() {
     if (this.wss) {
       this.wss.close(() => {
-        vlog.info('[SuperSrv] Closed on ' + this.m_host + ':' + this.m_port);
+        console.log('Super Server closed on ' + global.Colors.BSuccess + this.m_host + ':' + this.m_port + global.Colors.Reset);
         this._startServer(this.m_port, this.m_host);
       });
     } else {
@@ -41,8 +40,9 @@ class ParentCommServer {
     this.m_port = port;
     this.m_host = host;
 
-    vlog.info('[SuperSrv] Starting on ' + host + ':' + port);
-
+    console.log("Super Server Starting");
+    console.log("listening on ip: " + global.Colors.BSuccess + host + global.Colors.Reset + " port: " + global.Colors.BSuccess + port + global.Colors.Reset);
+    
     const server = http.createServer();
     this.wss = new WebSocket.Server({ server });
 
@@ -51,33 +51,38 @@ class ParentCommServer {
 
       this.clientData.set(clientKey, { child_ws, data: {} }); // Store ws and data
 
-      vlog.info('[SuperSrv] Child server connected from ' + clientKey);
+      console.log(`New Child Communication Server Connected from ${global.Colors.BSuccess}${clientKey}${global.Colors.Reset}`);
+      
 
       child_ws.on('close', () => {
         this.clientData.delete(clientKey); // Remove client on close
-        vlog.info('[SuperSrv] Child server disconnected from ' + clientKey);
+        console.log(`Connection closed from ${clientKey}`);
       });
 
       child_ws.on('message', (p_msg) => {
         try {
-          vlog.verbose('[SuperSrv] RX from ' + clientKey + ': ' + p_msg);
-          let v_isBinary = false;
-          if (typeof (p_msg) !== 'string') {
-            v_isBinary = true;
-          }
-          c_ChatServer.fn_parseExternalMessage(p_msg, v_isBinary);
-        } catch (error) {
-          vlog.error('[SuperSrv] Message parse error from ' + clientKey + ': ' + error);
+        console.log (`SUPER SRV RX:: ${p_msg}`);
+        let v_isBinary = false;
+        if (typeof (p_msg) !== 'string') {
+                v_isBinary = true;
         }
+        c_ChatServer.fn_parseExternalMessage(p_msg, v_isBinary);
+      } catch (error) {
+        console.error(`Error parsing message from parent:`, error);
+      }
       });
+  
+      
+
     });
 
+
     this.wss.on('error', (error) => {
-      vlog.error('[SuperSrv] Server error: ' + error);
+      console.log("Error: ", error);
     });
 
     server.listen(this.m_port, this.m_host, () => {
-      vlog.info('[SuperSrv] [OK] Listening on ' + this.m_host + ':' + this.m_port);
+      console.log(`${global.Colors.BSuccess}[OK] Super Server has Started at ${this.m_host}:${this.m_port}${global.Colors.Reset}`);
     });
   }
 

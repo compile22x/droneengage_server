@@ -9,7 +9,6 @@
 const { v4: uuidv4 } = require('uuid');
 const _dumpError = require("../../dumperror.js");
 const c_activeSenders = require("./js_andruav_active_senders.js");
-const vlog = require('../js_vertair_logger');
 
 
 const c_accounts = {};
@@ -92,11 +91,11 @@ function fn_add_member_to_AccountGroup(p_ws) {
 
     if (c_accounts.hasOwnProperty(v_id)) {
         // account already exists
-        vlog.verbose(`account ${v_id} already exists`);
+        console.log(`account ${v_id} already exists`);
         v_acc = c_accounts[v_id];
     } else {
         // account does not exist
-        vlog.verbose(`account ${v_id} created`);
+        console.log(`account ${v_id} created`);
         v_acc = new Account(v_id);
         c_accounts[v_id] = v_acc;
     }
@@ -109,13 +108,13 @@ function fn_add_member_to_AccountGroup(p_ws) {
 function fn_del_member_fromGroup(p_websocket) {
     if (!p_websocket.hasOwnProperty("m__group")) {
         // socket is not linked to any group
-        vlog.verbose("del_member_fromGroup: Nothing to Delete");
+        console.log("del_member_fromGroup: Nothing to Delete");
         return;
     }
 
     if (p_websocket.name == null) {
         delete p_websocket.m__group;
-        vlog.verbose('No unit name to remove');
+        console.log('No unit name to remove');
         return;
     }
 
@@ -130,7 +129,7 @@ function fn_del_member_fromAccountByName(p_loginRequest, terminateSocket) {
     let acc = c_accounts[p_loginRequest.m_accountID];
 
     if (acc == null) {
-        vlog.verbose("no account associated with socket — brand new socket.");
+        console.log("info: no account associated with socket .... This could be a brand new socket.");
 
         return;
     }
@@ -163,11 +162,11 @@ Account.prototype.fn_add_member_to_AccountGroup = function (p_unitname, p_groupn
 
     if (this.m_groups.hasOwnProperty(p_groupname)) {
         // group already exists
-        vlog.verbose(`group ${p_groupname} already exists`);
+        console.log(`group ${p_groupname} already exists`);
         gr = this.m_groups[p_groupname];
     } else {
         // group does not exist
-        vlog.verbose(`group ${p_groupname} created`);
+        console.log(`group ${p_groupname} created`);
         gr = this.m_groups[p_groupname] = new Group(this, p_groupname);
     }
 
@@ -215,10 +214,10 @@ Group.prototype.fn_addMember = function (p_unitname, p_ws) {
 
     if (this.m_units.hasOwnProperty(p_unitname)) {
         // this should never happen.
-        vlog.warn(`addMember [${p_unitname}] already EXISTS. Don't Override`);
+        console.log(`addMember [${p_unitname}] already EXISTS. Don't Override`);
         return false;
     } else {
-        vlog.verbose(`addMember [${p_unitname}] Added`);
+        console.log(`addMember [${p_unitname}] Added`);
         this.m_units[p_unitname] = p_ws;
         p_ws.name = p_unitname;
         p_ws.m__group = this;
@@ -233,13 +232,13 @@ Group.prototype.fn_addMember = function (p_unitname, p_ws) {
 Group.prototype.fn_deleteMemberByName = function (p_unitname, terminateSocket) {
     try {
         if (this.m_units.hasOwnProperty(p_unitname)) {
-            vlog.verbose(`deleteMemberByName: deleteMember ${p_unitname}`);
+            console.log(`deleteMemberByName: deleteMember ${p_unitname}`);
             // this is a socket under the same name 
             const oldSocket = this.m_units[p_unitname];
             delete this.m_units[p_unitname];
             delete oldSocket.m__group;
             if (terminateSocket) {
-                vlog.verbose(`deleteMemberByName: terminateSocket ${p_unitname}`);
+                console.log(`deleteMemberByName: terminateSocket ${p_unitname}`);
                 oldSocket.m__terminated = true;
                 oldSocket.terminate();
             }
@@ -262,7 +261,7 @@ Group.prototype.fn_sendToIndividual = function (message, isbinary, target, onNot
             onNotFound && onNotFound(target);
         }
     } catch (e) {
-        vlog.warn(`broadcast :ws:Orphan socket Error: ${e}`);
+        console.log(`broadcast :ws:Orphan socket Error: ${e}`);
         _dumpError.fn_dumperror(e);
         this.fn_handleOrphanSocket(socket);
     }
@@ -289,7 +288,7 @@ Group.prototype.fn_broadcast = function (p_message, p_isbinary, senderID, p_acto
                 socket.send(p_message, { binary: p_isbinary });
             }
         } catch (e) {
-            vlog.warn(`broadcast :ws:${socket.name} Orphan socket Error: ${e}`);
+            console.log(`broadcast :ws:${socket.name} Orphan socket Error: ${e}`);
             _dumpError.fn_dumperror(e);
             this.fn_handleOrphanSocket(socket);
         }
@@ -300,7 +299,7 @@ Group.prototype.fn_handleOrphanSocket = function (socket) {
     if (socket != null) {
         try {
             socket.m__group.fn_deleteMemberByName(socket.name);
-            vlog.verbose(`unit ${socket.Name} found dead`);
+            console.log(`unit ${socket.Name} found dead`);
             delete socket.name;
             socket.terminate();
         } catch (e) {

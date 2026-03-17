@@ -1,129 +1,279 @@
 "use strict";
 
 const m_commServerManagerClient = require("./js_comm_server_manager_client");
-const vlog = require("./js_vertair_logger");
 var m_agent_chat_server;
 const c_ChatAccountRooms = require("./chat_server/js_andruav_chat_account_rooms");
-const { v4: uuidv4 } = require("uuid");
+const { v4: uuidv4 } = require('uuid');
 const c_CONSTANTS = require("../js_constants");
-const v_version = require("../package.json").version;
+const v_version = require('../package.json').version;
 
-const CONST_WAIT_PARTY_TO_CONNECT_TIMEOUT = 10000;
+const CONST_WAIT_PARTY_TO_CONNECT_TIMEOUT = 10000; //60000; //5000;
 const CONST_DEFAULT_INFO_HEARTBEAT_INTERVAL = 30000;
 
 const m_waitingAccounts = {};
 let m_watchdogInterval = null;
 
-function isLoginExist(p_key) { return m_waitingAccounts[p_key] != null; }
-function getLogin(p_key) { return m_waitingAccounts[p_key] || null; }
-function deleteLogin(p_key) {
-    if (p_key == null || m_waitingAccounts[p_key] == null) return;
+
+function isLoginExist (p_key){
+    return m_waitingAccounts[p_key] != null;
+}
+
+function getLogin(p_key)
+{
+    return m_waitingAccounts[p_key] || null;
+}
+
+function deleteLogin(p_key)
+{
+    if (p_key == null)
+        return;
+    if (m_waitingAccounts[p_key] == null)
+        return;
     delete m_waitingAccounts[p_key];
 }
+
+
+
+
+
+
+/**
+ * Called by AUTH server to invalidate a session and close any socket.
+ * NOT IMPLEMENTED
+ */
 function fn_removeSenderID(p_senderID) {
+    // 1- remove senderID from any waiting to connect list.
     fn_cancelLoginRequestBySenderID(p_senderID);
+
+    // 2- remove senderID from any active connection.
     fn_closeActiveConnectionBySenderID(p_senderID);
 }
+
+
 function fn_cancelLoginRequestBySenderID(p_requestID) {
-    if (p_requestID == null) return;
+    if (p_senderID == null) return;
+
     const c_keys = Object.keys(m_waitingAccounts);
-    for (var i = 0; i < c_keys.length; ++i) {
+    const c_len = c_keys.length;
+
+    for (var i = 0; i < c_len; ++i) {
         const c_LoginRequest = m_waitingAccounts[c_keys[i]];
         if (c_LoginRequest[c_CONSTANTS.CONST_CS_REQUEST_ID.toString()] == p_requestID) {
             delete m_waitingAccounts[c_keys[i]];
-            m_commServerManagerClient.fn_onMessageOpened();
+            c_CommServerManagerClient.fn_onMessageOpened();
             return;
         }
     }
 }
-function fn_closeActiveConnectionBySenderID(p_senderID) {}
 
-function fn_addWaitingAccount(p_tempLoginKey, p_LoginRequest) {
-    m_waitingAccounts[p_tempLoginKey] = p_LoginRequest;
-    setTimeout(function () { deleteLogin(p_tempLoginKey); }, CONST_WAIT_PARTY_TO_CONNECT_TIMEOUT);
+
+function fn_closeActiveConnectionBySenderID(p_senderID) {
+    // if (m_activeSenderIDsList.hasOwnProperty(p_senderID) === true) {
+    //     // call close and it already has all cleaning steps in [onClose Event].
+    //     m_activeSenderIDsList[p_senderID].close();
+    // }
 }
 
+
+/**
+ * 
+ * @param {*} p_tempLoginKey key sent by AuthServer
+ * @param {*} p_LoginRequest p_cmd.d{a: SID, at: actor type (d for drone) d, 
+ *  b:GroupID=1, 
+ *  r: requestID GUID, 
+ *  f: login_temp_key (same as p_tempLoginKey)}
+ */
+function fn_addWaitingAccount(p_tempLoginKey, p_LoginRequest) {
+    m_waitingAccounts[p_tempLoginKey] = p_LoginRequest;  // PartyName Temp
+
+    // COMMENT TO ALLOW DEBUGGING
+    setTimeout(function () {
+        deleteLogin(p_tempLoginKey);
+    }, CONST_WAIT_PARTY_TO_CONNECT_TIMEOUT);
+}
+
+
+/**
+ * Decrypt message from Auth server. 
+ * TODO: NOT IMPLEMENTED
+ * @param {raw message from Auth} p_msg 
+ */
 function fn_decryptAuthMessage(p_msg) {
-    try { return JSON.parse(p_msg); }
-    catch (ex) { vlog.error("Failed to parse auth message: " + ex); }
+    try {
+        const v_msg = JSON.parse(p_msg);
+
+        return v_msg;
+    }
+    catch (ex) {
+        console.log(ex);
+    }
+
     return null;
 }
 
+/**
+ * Generates a reply to a login request. Should be a temp key used by agent to login and server IP & port.
+ * @param {*} p_cmd request from AUTH_SERVER
+ * @returns 
+ */
 function fn_generateLoginRequestReply(p_cmd) {
-    const c_reply = { "c": c_CONSTANTS.CONST_CS_CMD_LOGIN_REQUEST, "d": {} };
-    c_reply.d[c_CONSTANTS.CONST_CS_REQUEST_ID.toString()]         = p_cmd.d[c_CONSTANTS.CONST_CS_REQUEST_ID.toString()];
-    c_reply.d[c_CONSTANTS.CONST_CS_ERROR.toString()]              = c_CONSTANTS.CONST_ERROR_NON;
+    const c_reply = {
+        'c': c_CONSTANTS.CONST_CS_CMD_LOGIN_REQUEST, // info
+        'd': {}
+    };
+
+    c_reply.d[c_CONSTANTS.CONST_CS_REQUEST_ID.toString()] = p_cmd.d[c_CONSTANTS.CONST_CS_REQUEST_ID.toString()];
+    c_reply.d[c_CONSTANTS.CONST_CS_ERROR.toString()] = c_CONSTANTS.CONST_ERROR_NON;
     c_reply.d[c_CONSTANTS.CONST_CS_SERVER_PUBLIC_HOST.toString()] = global.m_serverconfig.m_configuration.public_host;
-    c_reply.d[c_CONSTANTS.CONST_CS_SERVER_PORT.toString()]        = global.m_serverconfig.m_configuration.server_port;
-    c_reply.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()]     = p_cmd.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()];
+    c_reply.d[c_CONSTANTS.CONST_CS_SERVER_PORT.toString()] = global.m_serverconfig.m_configuration.server_port;
+    c_reply.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()] = p_cmd.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()];
+
     return c_reply;
 }
 
+
+/**
+ * Called whenever a connection established with AuthServer.
+ * There is always one single Auth server.
+ * Sends INFO registration immediately and starts periodic heartbeat.
+ */
 function fn_AuthServerConnectionHandler() {
-    if (m_watchdogInterval) { clearInterval(m_watchdogInterval); m_watchdogInterval = null; }
-    vlog.info("[S2S] Connected to AuthServer — sending registration");
+    if (m_watchdogInterval) {
+        clearInterval(m_watchdogInterval);
+        m_watchdogInterval = null;
+    }
+
     fn_updateServerWatchdog();
+
     const c_interval = global.m_serverconfig.m_configuration.s2s_info_heartbeat_interval || CONST_DEFAULT_INFO_HEARTBEAT_INTERVAL;
     m_watchdogInterval = setInterval(fn_updateServerWatchdog, c_interval);
 }
 
+/**
+ * Generates CONST_CS_LOGIN_TEMP_KEY to be sent to agent through AndruavAuth
+ * Agent will use this key to connect to AndruavServer.
+ * add it to waiting list so that can be either deleted when timeout or retrieved when agent connects to AndruavServer.            
+ * @param {*} p_cmd JSON object of contains details of connection request.
+ * p_cmd.c = 'b' for new login request.
+ * p_cmd.d{a: SID, at: actor type (d for drone) d, b:GroupID=1, r: requestID GUID, f: login_temp_key (instead of party ID)}
+ */
 function fn_handleLoginResponses(p_cmd) {
-    p_cmd.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()] = uuidv4().replaceAll("-", "");
+    // Generates CONST_CS_LOGIN_TEMP_KEY to be sent to agent through AndruavAuth
+    // Agent will use this key to connect to AndruavServer.
+    p_cmd.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()] = uuidv4().replaceAll('-', '');
+    // add it to waiting list so that can be either deleted when timeout or retrieved when agent connects to AndruavServer.            
     fn_addWaitingAccount(p_cmd.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()], p_cmd.d);
-    const actor = p_cmd.d.at === "d" ? "Drone" : "GCS";
-    const key = vlog.redact(p_cmd.d[c_CONSTANTS.CONST_CS_LOGIN_TEMP_KEY.toString()]);
-    vlog.info("[LOGIN] Temp key " + key + " issued for " + actor + " | acct=..." + (p_cmd.d.a||"?").slice(-6) + " grp=" + (p_cmd.d.b||"?"));
-    vlog.m_sessionStats.logins++;
-    m_commServerManagerClient.fn_sendMessage(JSON.stringify(fn_generateLoginRequestReply(p_cmd)));
+    console.log("New Party: " + JSON.stringify(p_cmd));
+
+    const c_reply = fn_generateLoginRequestReply(p_cmd);
+
+    m_commServerManagerClient.fn_sendMessage(JSON.stringify(c_reply));
 }
 
+/**
+ * Handles messages received from Auth Server. It is called per message.
+ * @param {raw messages from auth server} p_msg 
+ */
 function fn_AuthServerMessagesHandler(p_msg) {
     try {
         const p_cmd = fn_decryptAuthMessage(p_msg);
-        if ((p_cmd == null) || (!p_cmd.hasOwnProperty("c"))) return;
+        if ((p_cmd == null) || (!p_cmd.hasOwnProperty('c'))) {
+            // invalid command
+            return;
+        }
+
         switch (p_cmd.c) {
             case c_CONSTANTS.CONST_CS_CMD_LOGIN_REQUEST:
-                if ((!p_cmd.hasOwnProperty("d")) || p_cmd.d.hasOwnProperty("d")) break;
-                fn_handleLoginResponses(p_cmd);
+                {
+                    //return ; // testing to generate timeout at authenticator.
+
+                    if ((!p_cmd.hasOwnProperty('d'))
+                        || p_cmd.d.hasOwnProperty('d')
+                    )
+                        break;
+                    fn_handleLoginResponses(p_cmd);
+                }
                 break;
+
+
             case c_CONSTANTS.CONST_CS_CMD_LOGOUT_REQUEST:
+                {
+                    //@todo: not implemented    
+
+                }
                 break;
         }
-    } catch (ex) { vlog.error("Auth message handler error: " + ex); }
+    }
+    catch (ex) {
+        console.log("err: fn_AuthServerMessagesHandler: " + ex);
+    }
 }
+
 
 function fn_updateServerWatchdog() {
     try {
-        const accounts = c_ChatAccountRooms.fn_getUnitKeys();
-        vlog.m_sessionStats.connectedUnits = accounts.length;
-        const v_obj = {
-            "isOnline": true, "version": v_version,
-            "serverId": global.m_serverconfig.m_configuration.server_id,
-            "public_host": global.m_serverconfig.m_configuration.public_host,
-            "serverPort": global.m_serverconfig.m_configuration.server_port,
-            "accounts": accounts
+        // prepare my Info Card
+        let v_obj = {
+            'isOnline': true,
+            'version': v_version,
+            'serverId': global.m_serverconfig.m_configuration.server_id,
+            'public_host': global.m_serverconfig.m_configuration.public_host, // this is the ip that is listening to the connections.
+            'serverPort': global.m_serverconfig.m_configuration.server_port,
+            // this is why we send this message with every connection.
+            // it is crucial to Auth server to know the exact unique list of keys
+            // so that it can rout correctly in case of multiple communication_servers
+            'accounts': c_ChatAccountRooms.fn_getUnitKeys()
         };
-        vlog.verbose("[S2S] Heartbeat → AuthServer | units=" + accounts.length + " host=" + v_obj.public_host + ":" + v_obj.serverPort);
-        m_commServerManagerClient.fn_sendMessage(JSON.stringify({ "c": c_CONSTANTS.CONST_CS_CMD_INFO, "d": v_obj }));
-    } catch (ex) { vlog.error("S2S watchdog error: " + ex); }
+
+        console.log(`[INFO] Sending S2S INFO to AuthServer: serverId=${v_obj.serverId} public_host=${v_obj.public_host} serverPort=${v_obj.serverPort} accounts=${v_obj.accounts.length}`);
+
+        // send Info Card to Andruav Auth
+        m_commServerManagerClient.fn_sendMessage(JSON.stringify(
+            {
+                'c': c_CONSTANTS.CONST_CS_CMD_INFO, // info
+                'd': v_obj  // data
+            }));
+    }
+    catch (ex) {
+        console.log("Error:fn_updateServerWatchdog:" + ex.toString());
+    }
 }
 
+/**
+ * Start Server
+ */
 function fn_startServer() {
-    vlog.info("Communication Server starting — verbose logging active for 5 minutes");
+
+    console.log(global.Colors.FgYellow + "Communication Server Starting..." + global.Colors.Reset);
+
     if (global.m_serverconfig.m_configuration.allow_fake_SSL === true) {
-        vlog.warn("TLS_REJECT_UNAUTHORIZED=0 active — only safe when auth is local");
+        // ATTENTION: should be FALSE in PRODUCTION
+        // skip verifying fake SSL
+        console.log(global.Colors.BFgYellow + "ATTENTION!!  SECURITY RISK . NODE_TLS_REJECT_UNAUTHORIZED = 0" + global.Colors.Reset);
+        console.log(global.Colors.BFgYellow + "THIS IS ACCEPTED ONLY IF COMM with ANDRUAV_AUTH is 127.0.0.1" + global.Colors.Reset);
+
         process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-    } else if (global.m_serverconfig.m_configuration.ca_cert_path === true) {
+    }
+    else if (global.m_serverconfig.m_configuration.ca_cert_path === true) {
         process.env["NODE_EXTRA_CA_CERTS"] = global.m_serverconfig.m_configuration.ca_cert_path;
     }
+
+
     if (global.m_serverconfig.m_configuration.ignore_auth_server !== true) {
         m_commServerManagerClient.fn_onMessageReceived = fn_AuthServerMessagesHandler;
         m_commServerManagerClient.fn_onMessageOpened = fn_AuthServerConnectionHandler;
+    
         m_commServerManagerClient.fn_startServer();
     }
-    vlog.startHeartbeat(() => vlog.m_sessionStats);
     m_agent_chat_server = global.m_chat_server_singelton_get_instance();
     m_agent_chat_server.fn_startServer();
+
 }
 
-module.exports = { fn_startServer, isLoginExist, getLogin, deleteLogin };
+
+module.exports = {
+    fn_startServer: fn_startServer,
+    isLoginExist: isLoginExist,
+    getLogin: getLogin,
+    deleteLogin: deleteLogin
+};
