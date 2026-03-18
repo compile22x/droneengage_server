@@ -5,6 +5,7 @@ primary_region = "iad"
   dockerfile = "Dockerfile"
 
 # WebSocket server for drones and GCS
+# handlers = ["tls", "http"] required for C++ WSS client proper TLS+HTTP upgrade
 [[services]]
   protocol = "tcp"
   internal_port = 443
@@ -14,7 +15,7 @@ primary_region = "iad"
 
   [[services.ports]]
     port = 443
-    handlers = ["tls"]
+    handlers = ["tls", "http"]
 
 # UDP proxy for Mission Planner (UDPCI connection)
 [[services]]
